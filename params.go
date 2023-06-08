@@ -218,26 +218,33 @@ type BIP32DeriveParams struct { //CK_BIP32_MASTER_DERIVE_PARAMS
 	PublicKeyAttributeCount  uint64       //CK_ULONG
 	PrivateKeyTemplate       []*Attribute //CK_ATTRIBUTE_PTR
 	PrivateKeyAttributeCount uint64       //CK_ULONG
-	PublicKey                uint64       //CK_OBJECT_HANDLE
-	PrivateKey               uint64       //CK_OBJECT_HANDLE
+	Path                     []uint64
+	PathLen                  uint64
+	PublicKey                uint64 //CK_OBJECT_HANDLE
+	PrivateKey               uint64 //CK_OBJECT_HANDLE
 }
 type CK_BIP32_MASTER_DERIVE_PARAMS struct {
 	pPublicKeyTemplate         C.CK_ATTRIBUTE_PTR
 	ulPublicKeyAttributeCount  C.CK_ULONG
 	pPrivateKeyTemplate        C.CK_ATTRIBUTE_PTR
 	ulPrivateKeyAttributeCount C.CK_ULONG
+	pulPath                    C.CK_ULONG_PTR
+	ulPathLen                  C.CK_ULONG
 	hPublicKey                 C.CK_OBJECT_HANDLE
 	hPrivateKey                C.CK_OBJECT_HANDLE
 }
 
 func ParseBIP32DeriveParams(p *BIP32DeriveParams) []byte {
+	_, pubPtr, pubPtrLen := cAttributeList(p.PublicKeyTemplate)
+	_, priPtr, priPtrLen := cAttributeList(p.PrivateKeyTemplate)
+	pathPtr := C.CK_ULONG_PTR(unsafe.Pointer(&p.Path))
 	params := CK_BIP32_MASTER_DERIVE_PARAMS{
-		pPublicKeyTemplate:         nil, // C.CK_ATTRIBUTE_PTR,
-		ulPublicKeyAttributeCount:  C.CK_ULONG(p.PublicKeyAttributeCount),
-		pPrivateKeyTemplate:        nil, //C.CK_ATTRIBUTE_PTR,
-		ulPrivateKeyAttributeCount: C.CK_ULONG(p.PrivateKeyAttributeCount),
-		hPublicKey:                 C.CK_OBJECT_HANDLE(p.PublicKey),
-		hPrivateKey:                C.CK_OBJECT_HANDLE(p.PrivateKey),
+		pPublicKeyTemplate:         pubPtr, // C.CK_ATTRIBUTE_PTR,
+		ulPublicKeyAttributeCount:  C.CK_ULONG(pubPtrLen),
+		pPrivateKeyTemplate:        priPtr, //C.CK_ATTRIBUTE_PTR,
+		ulPrivateKeyAttributeCount: C.CK_ULONG(priPtrLen),
+		pulPath:                    pathPtr,
+		ulPathLen:                  C.CK_ULONG(len(p.Path)),
 	}
 	return memBytes(unsafe.Pointer(&params), unsafe.Sizeof(params))
 }
